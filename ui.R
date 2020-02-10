@@ -4,39 +4,37 @@ library(markdown)
 navbarPage("Coronavirus Visualization",
            inverse=T,
            tabPanel("Welcome",
-                      mainPanel(fluidRow(column(8, align="center", offset = 2,
+                      mainPanel(fluidRow(column(8, align="center", offset = 4,
                                                 box(htmlOutput('intro_header'), br(),htmlOutput('intro_author'),
-                                                    htmlOutput('intro_contact'), uiOutput("tab"), width = 20),
-                                                tags$style(type="text/css", "#string { text-align:center }"))),
+                                                    uiOutput('here'), uiOutput("tab"), width = 20),
+                                                tags$style(type="text/css", "#string { text-align:center }",
+                                                           "#intro_header{ font-size: 20px}"))),
                                 br(),
-                                fluidRow(column(10, align="center", offset = 1,
+                                fluidRow(column(8, align="center", offset = 4,
                                                 div(img(
-                                                  src="https://globalbiodefense.com/wp-content/uploads/2020/02/coronavirus-entering-lungs-protein-databank-david-s-goodsell.jpg", height=350, width=350)),
-                                                br(),
+                                                  src="https://globalbiodefense.com/wp-content/uploads/2020/02/coronavirus-entering-lungs-protein-databank-david-s-goodsell.jpg", height=450, width=450)),
+                                                htmlOutput("intro_credit"),
                                                 br(),
                                                 box(htmlOutput("intro_body1"), width=20),
-                                                
-                                                tags$style(type="text/css", "#string { text-align:justified }")))
-                      
-                    )
+                                                tags$style(type="text/css", "#string { text-align:justified }", "#intro_body1 { font-size: 20px}")))
+                                 )
            ),
            
            tabPanel("Map",
                  sidebarLayout(
                      sidebarPanel(
                          h2("Global Spread of the Coronavirus"),
-                         br(),
+                         h5('Coronavirus Cases confirmed by the World Health Organization shown in red'),
                          chooseSliderSkin("Flat"),
                          sliderInput(
-                             label=h4('Date'),
+                             label=NULL,
                              inputId = "date_slide",
                              width= "25%",
                              max = slider_dates[1],
                              min = tail(slider_dates,1),
-                             value = slider_dates[1],
+                             value = tail(slider_dates,1),
                              animate= animationOptions(interval=500))
                          ),
-                     
                  
                      mainPanel(
                          leafletOutput("virus_map")
@@ -75,5 +73,16 @@ navbarPage("Coronavirus Visualization",
                             fluidRow(htmlOutput('comparison_plot'))
                         )
                     )
-           )
+           ),
+           
+           tabPanel("Sources",
+                      mainPanel(h3("Datasets Sources"),br(),
+                                uiOutput("source1"), br(),
+                                uiOutput("source2"), br(),
+                                uiOutput("source3"), br(),
+                                uiOutput("source4"))
+                      
+                      )
+                    
+
 )

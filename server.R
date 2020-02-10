@@ -1,39 +1,64 @@
 
 function(input, output, session){
-############### Create an Intro Page
+    
+    
+############### Create an Intro Page ##############################################################
     
     output$intro_header = renderUI({
         h1('Tracking the Coronavirus')
     })
     
     output$intro_author = renderUI({
-        h4('Josefa Sullivan')
+        h3('By Josefa Sullivan')
     })
     
-    output$intro_contact = renderUI({
-        h5('Have Questions? Contact me @ZefaSullivan or josefa.sullivan@gmail.com
-           ')
+    output$here <- renderUI({
+        url = a("here!", href="josefa.sullivan@gmail.com")
+        tagList("Have Questions? Contact me ", url)
     })
     
     output$tab <- renderUI({
-        url = a("GitHub", href="https://github.com/Josefa-Sullivan")
-        tagList("All code is also available on GitHub", url)
+        url = a("GitHub", href="https://github.com/Josefa-Sullivan/Viruz_Viz")
+        tagList("All code is also available on ", url)
     })
-
     
     output$intro_body1= renderUI({
         p('A new coronavirus has emerged in Wuhan, China. 
-          With more and more people becoming infected every day, there is a lot of concern that 
-          this virus is a deadly pandemic like none other. My goal was to track the Coronavirus and compare patient outcomes to 
-          previous viral outbreaks. By looking at the data, I hope to dispel some of the fear dominating our current news cycle.')
-        
+          With more cases every day, there is concern that this is a deadly pandemic like none other. My goal is to track the Coronavirus and compare patient outcomes to 
+          previous viral outbreaks. By looking at the data, I hope to dispel the fear surrounding the coronavirus.')
     })
     
-    output$myImage = renderImage({
-        
+    output$intro_credit= renderUI({
+        p('Image Credit: David S. Goodsell, RCSB Protein Data Bank')
     })
+    
+    output$source1= renderUI({
+        url = a("HDX", href="https://github.com/Josefa-Sullivan/Viruz_Viz")
+        tagList("Ebola Outbreak 2014: ", url)
+    })
+    
+    output$source2= renderUI({
+        url = a("JHU CSSE", href="https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6")
+        tagList("Coronavirus Outbreak 2019: ", url)
+    })
+    
+    output$source3= renderUI({
+        url = a("WHO", href="https://www.who.int/csr/sars/country/en/")
+        tagList("Severe Acute Respiratory Syndrome (SARS) Outbreak 2003: ", url)
+    })
+    
+    output$source4= renderUI({
+        url = a("CDC", href="https://www.cdc.gov/flu/about/burden/preliminary-in-season-estimates.htm")
+        tagList("Influenza (Flu) Outbreak 2020: ", url)
+    })
+    
+    
+
     
 ############ Plot the number of Coronavirus cases per country over time #############################
+## Future Work: Add Scale legend tied to size of circleMarkers, Add popup values when you hover, 
+## Future Work: Color-coding the countries based on case number would be better for visualization than the circles
+    
     map_date = reactive({
         df = timeseries_df %>% mutate(date=as.Date(timeseries_df$date)) %>%
             filter(date == input$date_slide)
@@ -46,7 +71,7 @@ function(input, output, session){
         leaflet() %>%
             addProviderTiles(providers$Stamen.TonerLite) %>% 
             setView(0, 0, zoom=1.25) %>% 
-            addFullscreenControl(position = "topleft", pseudoFullscreen = F)
+            addFullscreenControl(position = "topleft", pseudoFullscreen = T)
 
     })
 
@@ -74,7 +99,7 @@ function(input, output, session){
      })
 
     
-    # Plot timecourse of total coronavirus data in a line graph
+    # Create line graph of Coronavirus cases, deaths and recoveries over time based on user input
     output$virus_timeline_plot = renderGvis({
         plot_picks = c()
         
@@ -92,16 +117,16 @@ function(input, output, session){
         
         my_options = list(
             title="Timeline of Coronavirus Outcomes",
-            hAxis="{title:'Date '}",
-            vAxis="{title:'Number'}", 
+            hAxis="{title:'Date', fontName:'Tahoma',fontSize:25}",
+            vAxis="{title:'Number', fontName:'Tahoma',fontSize:25}", 
             width=700,
             height=500,
-            colors = "['#da602f', '#67001f','#fcdb6d']",
-            titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:15}",
+            colors = "['#970b13','#feb441', '#710026']",
+            titleTextStyle="{color: '#3d4854', fontName:'Tahoma', fontSize:20}",
             legend = "{position: 'bottom'}")
         
         
-        # Plot timeline
+        # Plot timecourse of total coronavirus data in a line graph
         gvisLineChart(timeline(), xvar="date", 
                       yvar = plot_picks,
                       options=my_options)
@@ -126,21 +151,21 @@ function(input, output, session){
             plot_picks_2 = append(plot_picks_2, "deaths")
         }
 
-        my_options = list(
+        my_options2 = list(
             title="Timeline of Ebola Outcomes",
-            hAxis="{title:'Date '}",
-            vAxis="{title:'Number'}", 
+            hAxis="{title:'Date', fontSize:25}",
+            vAxis="{title:'Number', fontSize:25}", 
             width=700,
             height=500,
-            colors = "['#da602f', '#67001f','#fcdb6d']",
-            titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:15}",
+            colors = "['#970b13','#feb441', '#710026']",
+            titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:20}",
             legend = "{position: 'bottom'}")
         
         
         # Plot timeline
         gvisLineChart(ebola_timeline(), xvar="date", 
                       yvar = plot_picks_2,
-                      options=my_options)
+                      options=my_options2)
         })
         
     
@@ -151,15 +176,15 @@ function(input, output, session){
         virus_bar_df
     })
 
+    # Bar plots of case number, deaths and mortality rates for 5 viruses (Flu 1918, Flu 2020, Coronavirus, Ebola, SARS)
     output$comparison_plot = renderGvis({
         
         my_list = list(title="Comparison of Viruses",
-                       height=800,
+                       height=600,
                        width=1000,
-                       hAxis="{title:'Virus', fontName:'Verdana', fontSize:15}",
-                       vAxis="{scaleType: 'log', title:'Number (log)', fontName:'Verdana', fontSize:15}",
-                       colors = "['#da602f', '#67001f','#fcdb6d']",
-                       titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:15}",
+                       vAxis="{scaleType: 'log', title:'Number (log)', fontName:'Verdana', fontSize:20}",
+                       colors = "['#970b13','#feb441', '#710026']",
+                       titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:20}",
                        legend = "{position: 'right'}")
         
         plot_picks_3 = c()
@@ -176,11 +201,10 @@ function(input, output, session){
             plot_picks_3 = append(plot_picks_3, "Mortality_Rate")
             my_list = list(title="Comparison of Viruses",
                            height=600,
-                           width=800,
-                           hAxis="{title:'Virus',fontName:'Verdana', fontSize:15}",
-                           vAxis="{title:'Number',fontName:'Verdana', fontSize:15}",
-                           colors = "['#da602f', '#67001f','#fcdb6d']",
-                           titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:15}",
+                           width=1000,
+                           vAxis="{title:'Number',fontName:'Verdana', fontSize:20}",
+                           colors = "['#970b13','#feb441', '#710026']",
+                           titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:20}",
                            legend = "{position: 'right'}")
         }
 
@@ -193,4 +217,5 @@ function(input, output, session){
     })
 
 }
+
 
