@@ -5,6 +5,8 @@ library(googleVis)
 library(leaflet)
 library(shinyWidgets)
 library(leaflet.extras)
+library(markdown)
+library(shinydashboard)
 
 ################### Coronavirus data cleaning ###################################################
 deaths_timeseries = read.csv("./Data/time_series_2019-ncov - Death.csv", header=T, stringsAsFactors = F)
@@ -105,7 +107,7 @@ ebola_timeseries[ebola_timeseries$date>as.Date("02/13/15", "%m/%d/%y"),]$deaths=
 # Fix Irregular Liberia dates
 ebola_timeseries[ebola_timeseries$date==as.Date("10/17/14", "%m/%d/%y"),]$deaths= ebola_timeseries[ebola_timeseries$date==as.Date("10/17/14", "%m/%d/%y"),]$deaths+1157
 ebola_timeseries[ebola_timeseries$date==as.Date("10/15/14", "%m/%d/%y"),]$deaths= ebola_timeseries[ebola_timeseries$date==as.Date("10/15/14", "%m/%d/%y"),]$deaths+1157
-ebola_timeseries$deaths
+
 
 list_ = filter(ebola_timeseries, ebola_timeseries$date>as.Date("10/25/14", "%m/%d/%y")&
                  ebola_timeseries$date <as.Date("02/10/15", "%m/%d/%y"))$deaths
@@ -151,3 +153,4 @@ stats_df = data.frame(virus = c('Ebola','Coronavirus','SARS', 'Influenza_1918', 
           mutate(Mortality_Rate=Deaths/Cases*100) %>% 
           arrange(virus)
 
+stats_df

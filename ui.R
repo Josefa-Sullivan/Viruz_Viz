@@ -1,5 +1,4 @@
-# bugs in app mean check UI
-library(markdown)
+
 
 navbarPage("Coronavirus Visualization",
            inverse=T,
@@ -81,7 +80,7 @@ navbarPage("Coronavirus Visualization",
                                 uiOutput("source2"), br(),
                                 uiOutput("source3"), br(),
                                 uiOutput("source4"))
-                      
+
                       )
                     
 

@@ -1,7 +1,7 @@
 
 function(input, output, session){
     
-    
+    ?box
 ############### Create an Intro Page ##############################################################
     
     output$intro_header = renderUI({
@@ -132,6 +132,8 @@ function(input, output, session){
                       options=my_options)
         
     })
+    
+
     
     # Make ebola df reactive
     ebola_timeline= reactive({
