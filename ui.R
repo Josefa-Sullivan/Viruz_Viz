@@ -28,11 +28,12 @@ navbarPage("Coronavirus Visualization",
                          sliderInput(
                              label=NULL,
                              inputId = "date_slide",
-                             width= "25%",
+                             width= "50%",
                              max = slider_dates[1],
                              min = tail(slider_dates,1),
                              value = tail(slider_dates,1),
                              animate= animationOptions(interval=500))
+                         
                          ),
                  
                      mainPanel(
@@ -43,7 +44,7 @@ navbarPage("Coronavirus Visualization",
            
            tabPanel("Timeline",
                     sidebarLayout(
-                        sidebarPanel(
+                        sidebarPanel(width=3,
                             h2("Timeline of Infections and Deaths"),
                             br(),
                             checkboxInput("cases", "Cases", value = TRUE),

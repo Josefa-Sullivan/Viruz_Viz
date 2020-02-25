@@ -1,7 +1,7 @@
 
 function(input, output, session){
     
-    ?box
+
 ############### Create an Intro Page ##############################################################
     
     output$intro_header = renderUI({
@@ -38,7 +38,7 @@ function(input, output, session){
     })
     
     output$source2= renderUI({
-        url = a("JHU CSSE", href="https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6")
+        url = a("JHU CSSE", href="https://github.com/CSSEGISandData/COVID-19")
         tagList("Coronavirus Outbreak 2019: ", url)
     })
     
@@ -53,6 +53,7 @@ function(input, output, session){
     })
     
     
+  #  
 
     
 ############ Plot the number of Coronavirus cases per country over time #############################
@@ -70,7 +71,7 @@ function(input, output, session){
     output$virus_map = renderLeaflet({
         leaflet() %>%
             addProviderTiles(providers$Stamen.TonerLite) %>% 
-            setView(0, 0, zoom=1.25) %>% 
+            setView(112, 35, zoom=3) %>% 
             addFullscreenControl(position = "topleft", pseudoFullscreen = T)
 
     })
@@ -82,7 +83,7 @@ function(input, output, session){
                              lng = map_date()$Long,
                              radius= sqrt(map_date()$case_number)/4,
                              fillOpacity = 0.5,
-                             opacity=0.1,
+                             opacity=0.2,
                              color ='red')
                              
     })
@@ -121,8 +122,8 @@ function(input, output, session){
             vAxis="{title:'Number', fontName:'Tahoma',fontSize:25}", 
             width=700,
             height=500,
-            colors = "['#970b13','#feb441', '#710026']",
-            titleTextStyle="{color: '#3d4854', fontName:'Tahoma', fontSize:20}",
+            colors = "['#bc0025','#710026', '#ee7516']",
+            titleTextStyle="{color: '#3d4854', fontName:'Tahoma', fontSize:15}",
             legend = "{position: 'bottom'}")
         
         
@@ -151,16 +152,19 @@ function(input, output, session){
         }
         if (input$deaths){
             plot_picks_2 = append(plot_picks_2, "deaths")
+        } 
+        if (input$recoveries){
+          plot_picks_2 = append(plot_picks_2, "recoveries")
         }
 
         my_options2 = list(
             title="Timeline of Ebola Outcomes",
             hAxis="{title:'Date', fontSize:25}",
-            vAxis="{title:'Number', fontSize:25}", 
+            vAxis="{title:'Number', fontSize:25, maxValue: 50000 }", 
             width=700,
             height=500,
-            colors = "['#970b13','#feb441', '#710026']",
-            titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:20}",
+            colors = "['#bc0025','#710026', '#ee7516']",
+            titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:15}",
             legend = "{position: 'bottom'}")
         
         
@@ -185,7 +189,7 @@ function(input, output, session){
                        height=600,
                        width=1000,
                        vAxis="{scaleType: 'log', title:'Number (log)', fontName:'Verdana', fontSize:20}",
-                       colors = "['#970b13','#feb441', '#710026']",
+                       colors = "['#bc0025','#710026', '#ee7516']",
                        titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:20}",
                        legend = "{position: 'right'}")
         
@@ -205,7 +209,7 @@ function(input, output, session){
                            height=600,
                            width=1000,
                            vAxis="{title:'Number',fontName:'Verdana', fontSize:20}",
-                           colors = "['#970b13','#feb441', '#710026']",
+                           colors = "['#bc0025','#710026', '#ee7516']",
                            titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:20}",
                            legend = "{position: 'right'}")
         }

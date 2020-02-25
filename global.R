@@ -9,21 +9,31 @@ library(markdown)
 library(shinydashboard)
 
 ################### Coronavirus data cleaning ###################################################
-deaths_timeseries = read.csv("./Data/time_series_2019-ncov - Death.csv", header=T, stringsAsFactors = F)
-cases_timeseries = read.csv("./Data/time_series_2019-ncov - Confirmed.csv", header=T, stringsAsFactors = F)
-recovered_timeseries = read.csv("./Data/time_series_2019-ncov - Recovered.csv", header=T, stringsAsFactors = F)
+
+# Get latest data from JHU Github (https://github.com/CSSEGISandData/COVID-19)
+data_github_deaths = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv"
+data_github_confirmed = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv"
+data_github_recovered = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv"
+
+# Load data into dataframes
+deaths_timeseries = read.csv(data_github_deaths, header=T, stringsAsFactors = F)
+cases_timeseries = read.csv(data_github_confirmed, header=T, stringsAsFactors = F)
+recovered_timeseries = read.csv(data_github_recovered, header=T, stringsAsFactors = F)
 
 # gather time columns into one row
+last_date = deaths_timeseries %>% colnames() %>% tail(1)
+first_date= colnames(deaths_timeseries)[5]
+  
 deaths_timeseries = deaths_timeseries %>% gather(key='date', value='death_number', 
-                                                 X1.21.2020.10.00.PM:X2.6.2020.2.20.PM)
+                                                 first_date:last_date)
 cases_timeseries = cases_timeseries %>% gather(key='date', value='case_number', 
-                                               X1.21.2020.10.00.PM:X2.6.2020.2.20.PM)
+                                              first_date:last_date)
 recovered_timeseries = recovered_timeseries %>% gather(key='date', value='recovered_number', 
-                                                       X1.21.2020.10.00.PM:X2.6.2020.2.20.PM)
+                                                       first_date:last_date)
 
 # Convert date column from character to Date.Time
 fmt_df_dates = function(df){
-  df$date = parse_date_time(gsub("X","", df$date), "%m.%d.%Y.%H.%M.%p")
+  df$date = parse_date_time(gsub("X","", df$date), "%m.%d.%y")
   return(df)
 }
 
@@ -36,26 +46,20 @@ recovered_timeseries = fmt_df_dates(recovered_timeseries)
 timeseries_df = full_join(cases_timeseries, deaths_timeseries)
 timeseries_df = full_join(timeseries_df, recovered_timeseries)
 
-# Drop duplicate column
-timeseries_df = timeseries_df %>% select(-First.confirmed.date.in.country..Est..)
 
 # Convert NA to 0
 timeseries_df[is.na(timeseries_df)] = 0
 
-# Reorder columns
-timeseries_df = timeseries_df[,c(2,1,3,4,5,7,6,8,9)]
 
 # Sort df by most recent date and then by Country and Province
 timeseries_df = timeseries_df %>% arrange(desc(date), Country.Region, Province.State)
 
 # create a df of the latest case numbers
-latest_numbers = timeseries_df[1:68,]
+latest_numbers = timeseries_df %>% filter(date==unique(timeseries_df$date)[1])
 
-# NEED to impute values for recoveries for 1/31/2020
 
 # Create list of dates to use for input on map
 slider_dates = timeseries_df$date %>% as.Date() %>% unique()
-
 
 
 
@@ -126,13 +130,12 @@ ebola_timeseries[ebola_timeseries$date>as.Date("10/25/14", "%m/%d/%y")&
 # Limit timeframe visualized to July 2015
 ebola_timeseries = ebola_timeseries %>% filter(date<as.Date("07/5/15", "%m/%d/%y"))
 
-
-
+# Recoveries not included in dataset, add dummy value of 1 to prevent bug in timeline graph
+ebola_timeseries$recoveries = 0
 
 
 ################### SARS data cleaning ###################################################
 sars_df = read.csv("./Data/sars_2003_cumulative.csv", header = T, stringsAsFactors = FALSE)
-
 
 
 sars_df$Total[3] = "5327"
@@ -147,9 +150,9 @@ sars_total = sars_df %>% summarise(total = sum(Total),
 
 # Combine data from different viruses
 
-stats_df = data.frame(virus = c('Ebola','Coronavirus','SARS', 'Influenza_1918', 'Influenza_2020'),
-           Cases = c(15138,28353,8098,500e6,31e6),
-           Deaths = c(9478,565,774, 50e6, 30000)) %>% 
+stats_df = data.frame(virus = c('Ebola','COVID-19','SARS', 'Influenza 1918', 'Influenza 2020'),
+           Cases = c(15138,sum(latest_numbers$case_number),8098,500e6,31e6),
+           Deaths = c(9478,sum(latest_numbers$death_number),774, 50e6, 30000)) %>% 
           mutate(Mortality_Rate=Deaths/Cases*100) %>% 
           arrange(virus)
 
