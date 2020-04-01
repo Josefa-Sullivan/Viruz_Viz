@@ -23,9 +23,9 @@ function(input, output, session){
     })
     
     output$intro_body1= renderUI({
-        p('A new coronavirus has emerged in Wuhan, China. 
-          With more cases every day, there is concern that this is a deadly pandemic like none other. My goal is to track the Coronavirus and compare patient outcomes to 
-          previous viral outbreaks. By looking at the data, I hope to dispel the fear surrounding the coronavirus.')
+        p('A new coronavirus, SARS-CoV-2, emerged in Wuhan, China in late 2019. 
+          This app tracks the pandemic as case numbers increase across the globe 
+          and compares patient outcomes to previous viral outbreaks.')
     })
     
     output$intro_credit= renderUI({
@@ -33,7 +33,7 @@ function(input, output, session){
     })
     
     output$source1= renderUI({
-        url = a("HDX", href="https://github.com/Josefa-Sullivan/Viruz_Viz")
+        url = a("HDX", href="https://data.humdata.org/dataset/ebola-cases-2014")
         tagList("Ebola Outbreak 2014: ", url)
     })
     
@@ -61,33 +61,84 @@ function(input, output, session){
 ## Future Work: Color-coding the countries based on case number would be better for visualization than the circles
     
     map_date = reactive({
-        df = timeseries_df %>% mutate(date=as.Date(timeseries_df$date)) %>%
-            filter(date == input$date_slide)
+        df = timeseries_df[which(timeseries_df$date == input$date_slide),]
         df
     })
 
 
-    
+
     output$virus_map = renderLeaflet({
         leaflet() %>%
-            addProviderTiles(providers$Stamen.TonerLite) %>% 
-            setView(112, 35, zoom=3) %>% 
-            addFullscreenControl(position = "topleft", pseudoFullscreen = T)
+            addProviderTiles(providers$Stamen.TonerLite) %>%
+            addFullscreenControl(position = "topleft", pseudoFullscreen = T) %>% 
+            # setView(mean(timeseries_df$Long), mean(timeseries_df$Lat),zoom=1)
+            # addCircleMarkers(lat = map_date()$Lat,
+            #                  lng = map_date()$Long,
+            #                  radius= sqrt(map_date()$case_number)/4,
+            #                  fillOpacity = 0.5,
+            #                  opacity=0.2,
+            #                  color ='red') %>% 
+            fitBounds(lng1 = min(map_date()$Long),
+                      lat1 = min(map_date()$Lat),
+                      lng2 = max(map_date()$Long),
+                      lat2 = max(map_date()$Lat))
 
     })
 
     observeEvent(input$date_slide, {
-        leafletProxy("virus_map") %>% 
-            clearMarkers() %>% 
+        leafletProxy("virus_map") %>%
+            clearMarkers() %>%
             addCircleMarkers(lat = map_date()$Lat,
                              lng = map_date()$Long,
                              radius= sqrt(map_date()$case_number)/4,
                              fillOpacity = 0.5,
                              opacity=0.2,
                              color ='red')
-                             
+
     })
     
+    
+    
+    
+    # lng.center <- -99
+    # lat.center <- 60
+    # zoom.def <- 3
+    # 
+    # data <- timeseries_df
+    # 
+    # output$virus_map <- renderLeaflet({
+    #   leaflet() %>%
+    #     addProviderTiles("OpenStreetMap.Mapnik",
+    #                      options = providerTileOptions(opacity = 1),
+    #                      group = "Open Street Map") %>%
+    #     setView(lng = lng.center, lat = lat.center, zoom = zoom.def) %>%
+    #     addPolygons(group = 'base', 
+    #                 fillColor = 'transparent', 
+    #                 color = 'black',
+    #                 weight = 1.5) # %>%
+    #     # addLegend(pal = pal(), values = data$case_number, 
+    #     #           opacity = 0.7, title = NULL,
+    #     #           position = "topright")
+    # })
+    # 
+    # get_data <- reactive({
+    #   data[which(data$date == input$date_slide),]
+    # })
+    # 
+    # pal <- reactive({
+    #   colorNumeric("viridis", domain = data$case_number)
+    # })
+    # 
+    # observe({
+    #   data <- get_data()
+    #   leafletProxy('virus_map', data = data) %>%
+    #     clearGroup('polygons') %>%
+    #     addPolygons(group = 'polygons', 
+    #                 fillColor = ~pal()(data$case_number), 
+    #                 fillOpacity = 0.9,
+    #                 color = 'black',
+    #                 weight = 1.5)
+    # })
     
 ######### Add Timelines of Coronavirus and Ebola data  ###########################
      # Calculate the total number of cases, deaths and recoveries for each date
@@ -117,11 +168,11 @@ function(input, output, session){
         }
         
         my_options = list(
-            title="Timeline of Coronavirus Outcomes",
+            title="Cumulative Timeline",
             hAxis="{title:'Date', fontName:'Tahoma',fontSize:25}",
-            vAxis="{title:'Number', fontName:'Tahoma',fontSize:25}", 
-            width=700,
-            height=500,
+            vAxis="{title:'Number', fontName:'Tahoma',fontSize:25}",
+            width='100%',
+            height=400,
             colors = "['#bc0025','#710026', '#ee7516']",
             titleTextStyle="{color: '#3d4854', fontName:'Tahoma', fontSize:15}",
             legend = "{position: 'bottom'}")
@@ -136,15 +187,14 @@ function(input, output, session){
     
 
     
-    # Make ebola df reactive
-    ebola_timeline= reactive({
-        ebola_time_df = ebola_timeseries
-        ebola_time_df
+    # Make cumlate df reactive
+    daily_timeline= reactive({
+        daily_numbers_df
     })
     
 
     # Plot timecourse of total Ebola Cases in a GVis line chart   
-    output$ebola_timeline_plot = renderGvis({
+    output$daily_timeline_plot = renderGvis({
        
         plot_picks_2 = c()
         if (input$cases){
@@ -158,18 +208,19 @@ function(input, output, session){
         }
 
         my_options2 = list(
-            title="Timeline of Ebola Outcomes",
+            title="Daily Timeline",
             hAxis="{title:'Date', fontSize:25}",
-            vAxis="{title:'Number', fontSize:25, maxValue: 50000 }", 
-            width=700,
-            height=500,
+            vAxis="{title:'Number', fontSize:25}", 
+            width='100%',
+            height=400,
+            bar="{groupWidth:50}",
             colors = "['#bc0025','#710026', '#ee7516']",
             titleTextStyle="{color: '#3d4854', fontName:'Verdana', fontSize:15}",
             legend = "{position: 'bottom'}")
         
         
         # Plot timeline
-        gvisLineChart(ebola_timeline(), xvar="date", 
+        gvisColumnChart(daily_timeline(), xvar="date", 
                       yvar = plot_picks_2,
                       options=my_options2)
         })
