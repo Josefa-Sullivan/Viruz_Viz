@@ -44,29 +44,38 @@ navbarPage("Coronavirus Visualization",
            
            tabPanel("Timeline",
                     sidebarLayout(
-                        sidebarPanel(width=3,
-                            h2("Timeline of Infections and Deaths"),
+                        sidebarPanel(width=2,
+                            h2("Timeline of COVID-19 Outcomes"),
                             br(),
-                            checkboxInput("cases", "Cases", value = TRUE),
+                            h4(checkboxInput("cases", "Cases", value = TRUE),
                             checkboxInput("deaths", "Deaths", value = FALSE),
-                            checkboxInput("recoveries", "Recoveries", value = FALSE)
+                            checkboxInput("recoveries", "Recoveries", value = FALSE)),
+                            br(),
+                            br(),
+                            h3('Current Numbers:'),
+                            h4(paste0("Cases: ", formatC(current_totals[[1]], format='d', big.mark=',' ))),
+                            h4(paste0("Deaths: ",formatC(current_totals[[2]], format='d', big.mark=',' ))),
+                            h4(paste0("Recoveries: ", formatC(current_totals[[3]], format='d', big.mark=',' )))
                             ),
                     
                     mainPanel(
-                           fluidRow(column(6, htmlOutput('virus_timeline_plot')),
-                                    column(6, htmlOutput('ebola_timeline_plot')))
+                      fluidRow(
+                                htmlOutput('virus_timeline_plot')),
+                      fluidRow(
+                              htmlOutput('daily_timeline_plot')
+                      )
                     )
                     )
            ),
            
            tabPanel("Comparisons",
                     sidebarLayout(
-                        sidebarPanel(
-                            h2("Comparing to other Virus Outbreaks"),
+                        sidebarPanel( width=2,
+                            h2("Comparing COVID-19 to Other Viral Outbreaks"),
                             br(),
-                            checkboxInput("cases_all", "Cases", value = TRUE),
+                            h4(checkboxInput("cases_all", "Cases", value = TRUE),
                             checkboxInput("deaths_all", "Deaths", value = FALSE),
-                            checkboxInput("mort_rate", "Mortality Rate", value = FALSE)
+                            checkboxInput("mort_rate", "Mortality Rate", value = FALSE))
                         ),
 
                         mainPanel(
