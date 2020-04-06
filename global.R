@@ -7,10 +7,15 @@ library(shinyWidgets)
 library(leaflet.extras)
 library(markdown)
 library(shinydashboard)
+library(maps)
+library(maptools)
+library(sp)
 
 
 
+#################################################################################################
 ################### Coronavirus data cleaning ###################################################
+#################################################################################################
 
 # Get latest data from JHU Github (https://github.com/CSSEGISandData/COVID-19)
 data_github_deaths = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
@@ -86,184 +91,161 @@ timeseries_df = timeseries_df %>% arrange(desc(date), Country.Region, Province.S
 latest_numbers = timeseries_df %>% filter(date==unique(timeseries_df$date)[1])
 
 current_totals = colSums(latest_numbers[c(6,7,8)])
+
 # Create list of dates to use for input on map
 slider_dates = timeseries_df$date %>% as.Date() %>% unique()
 
 
+#################################################################################################
+################# Combine Case data with Spatial Data to Map  ###################################
+#################################################################################################
 
-################### Ebola data cleaning ###################################################
+# Dataframe grouped by Country and Date to use in reactive map 
+country_date_df = timeseries_df %>% group_by(Country.Region, date) %>% summarise(cases=sum(case_number))
 
-ebola = read.csv("./Data/ebola_data.csv", stringsAsFactors = FALSE)
+# Load world data set with Lat and Long coordinates
+world = ggplot2::map_data('world')
 
-# convert columns to lowercase
-colnames(ebola) = tolower(colnames(ebola))
+# Check to see if countries match those in the world dataset
+country_date_df$Country.Region[!country_date_df$Country.Region %in% world$region] %>% unique()
 
-
-# Combine Guinea and Guinea 2 and repeat for Liberia/Liberia 2
-ebola[ebola$country=='Guinea 2',]$country="Guinea"
-
-ebola[ebola$country=='Liberia 2',]$country="Liberia"
-
-
-# Convert to date object
-ebola$date=as.Date(ebola$date, "%Y-%m-%d")
-
-# Create timeline of Ebola deaths and cases
-df1 = ebola %>% filter(indicator=="Cumulative number of confirmed Ebola cases") %>% 
-  group_by(date) %>% 
-  summarise(cases = sum(value)) %>% 
-  arrange(date) 
+### Convert Country Names to match ggplot names to plot worldmap
+### Cruise Ship names will not be mapped
+new_names = c('Antigua', 'Cape Verde', 'Republic of Congo', 'Democratic Republic of the Congo', 'Ivory Coast',
+              'Czech Republic','Swaziland','Vatican','South Korea','Macedonia','Saint Vincent','Taiwan',
+              'Trinidad','UK','USA','Palestine','Saint Kitts','Myanmar')
 
 
-df2 = ebola %>% filter(indicator=="Cumulative number of confirmed Ebola deaths") %>% 
-  group_by(date) %>% 
-  summarise(deaths = sum(value)) %>% 
-  arrange(date)
+names_to_change = c('Antigua and Barbuda', 'Cabo Verde', "Congo [(]Brazzaville[)]", "Congo [(]Kinshasa[)]",
+                    "Cote d'Ivoire", 'Czechia', 'Eswatini', 'Holy See', 'Korea, South', 'North Macedonia',
+                    'Saint Vincent and the Grenadines', 'Taiwan[*]', 'Trinidad and Tobago', 'United Kingdom',
+                    'US', 'West Bank and Gaza', 'Saint Kitts and Nevis','Burma')
 
-ebola_timeseries = full_join(df1,df2)
+i = 1
 
-# Impute missing Liberia value on 10/17/14
-ebola_timeseries[15,2] = 5252
-
-
-#Liberia is dropped from dataset after 2/13/15. Add last confirmed number to subsequent times
-ebola %>% filter(indicator=="Cumulative number of confirmed Ebola deaths") %>% 
-  group_by(country) %>% summarise(n=n())
-
-ebola %>% filter(country=="Liberia" &
-                   indicator=="Cumulative number of confirmed Ebola deaths"&
-                   date>as.Date("02/13/15", "%m/%d/%y"))
-
-ebola_timeseries[ebola_timeseries$date>as.Date("02/13/15", "%m/%d/%y"),]$deaths= ebola_timeseries[ebola_timeseries$date>as.Date("02/13/15", "%m/%d/%y"),]$deaths+3858
-
-# Fix Irregular Liberia dates
-ebola_timeseries[ebola_timeseries$date==as.Date("10/17/14", "%m/%d/%y"),]$deaths= ebola_timeseries[ebola_timeseries$date==as.Date("10/17/14", "%m/%d/%y"),]$deaths+1157
-ebola_timeseries[ebola_timeseries$date==as.Date("10/15/14", "%m/%d/%y"),]$deaths= ebola_timeseries[ebola_timeseries$date==as.Date("10/15/14", "%m/%d/%y"),]$deaths+1157
-
-
-list_ = filter(ebola_timeseries, ebola_timeseries$date>as.Date("10/25/14", "%m/%d/%y")&
-                 ebola_timeseries$date <as.Date("02/10/15", "%m/%d/%y"))$deaths
-list_[1]=2999
-i=2
-while (i < length(list_)+1){
-  temp = list_[i-1]
-  list_[i]=temp +118
+while (i < length(names_to_change)+1) {
+  country_date_df$Country.Region = gsub(names_to_change[i], new_names[i], country_date_df$Country.Region)
   i = i+1
 }
 
-ebola_timeseries[ebola_timeseries$date>as.Date("10/25/14", "%m/%d/%y")&
-                   ebola_timeseries$date <as.Date("02/10/15", "%m/%d/%y") ,]$deaths = list_
-
-
-# Limit timeframe visualized to July 2015
-ebola_timeseries = ebola_timeseries %>% filter(date<as.Date("07/5/15", "%m/%d/%y"))
-
-# Recoveries not included in dataset, add dummy value of 1 to prevent bug in timeline graph
-ebola_timeseries$recoveries = 0
-
-
-################### SARS data cleaning ###################################################
-sars_df = read.csv("./Data/sars_2003_cumulative.csv", header = T, stringsAsFactors = FALSE)
-
-
-sars_df$Total[3] = "5327"
-sars_df$Total = as.numeric(sars_df$Total)
-
-sars_df = sars_df %>% transform(Total=as.numeric(Total))
-sars_total = sars_df %>% summarise(total = sum(Total),
-                                   deaths = sum(Number.of.deaths.a),
-                                   mortality_rate = deaths/total*100)
 
 
 
-# Combine data from different viruses
+
+bins = c(1,100, 1000, 10000,100000, 500000)
+
+# Initialize the map object without specifying regions
+countries = map('world', fill=T, plot=F)
+
+# Store country names without regions appended in a vector called "coutnry" within the countries object
+# Check out the countries$name vector for clarification
+countries$country = vapply(strsplit(countries$name, ":"), function(x) x[1], FUN.VALUE="a")
+# 
+# # Make sure to assign the values to the correct countries, the order is not correct if you just assign 1 to 1
+# # The match function will give the correct order of the indices to assign by matching
+# # Check out match(countries$country,country_date_df$Country.Region) for clarification
+# countries$Value = country_date_df$cases[ match(countries$country, country_date_df$Country.Region) ]
+# 
+
+
+
+
+########################################################################################
+######## Compare data from different viruses ###########################################
+########################################################################################
 
 stats_df = data.frame(virus = c('COVID-19','SARS', 'Influenza 1918', 'Influenza 2020','Ebola'),
-           Cases = c(sum(latest_numbers$case_number),8098,500e6,31e6, 15138),
-           Deaths = c(sum(latest_numbers$death_number),774, 50e6, 30000, 9478)) %>% 
-          mutate(Mortality_Rate=Deaths/Cases*100) %>% 
-          arrange(virus)
+                      Cases = c(sum(latest_numbers$case_number),8098,500e6,31e6, 15138),
+                      Deaths = c(sum(latest_numbers$death_number),774, 50e6, 30000, 9478)) %>% 
+  mutate(Mortality_Rate=Deaths/Cases*100) %>% 
+  arrange(virus)
 
 stats_df=stats_df[c(1,5,4,3,2),]
 
 
+#############################################################################################################
+# ################### Ebola data cleaning Used in Previous Version ###################################################
+#############################################################################################################
 
-
-########################## World Map Function for Visualization ########################################
-# # ISO-3 Country codes adapted from wikipedia ('https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3')
-# iso_codes_wiki = read.csv('Data/country_iso_codes.csv', header=F, stringsAsFactors = F)
+# ebola = read.csv("./Data/ebola_data.csv", stringsAsFactors = FALSE)
 # 
-# # Cruise Ships are not included in ISO codes and will not be used for country counts
-# covid_countries[!covid_countries %in% iso_codes_wiki$V2]
-
-
-# library(maps)
-# library(ggplot2)
-# world_data <- ggplot2::map_data('world')
-# world_data <- fortify(world_data) %>% rmapshaper::ms_simplify(keep=0.1, keep_shapes=T)
-# head(world_data)
-# 
-# ### Convert Country Names to match ggplot names to plot worldmap
-# new_names = c('Antigua', 'Cape Verde', 'Republic of Congo', 'Democratic Republic of the Congo', 'Ivory Coast',
-#               'Czech Republic','Swaziland','Vatican','South Korea','Macedonia','Saint Vincent','Taiwan',
-#               'Trinidad','UK','USA','Palestine','Saint Kitts','Myanmar')
+# # convert columns to lowercase
+# colnames(ebola) = tolower(colnames(ebola))
 # 
 # 
-# names_to_change = c('Antigua and Barbuda', 'Cabo Verde', 'Congo (Brazzaville)', 'Congo (Kinshasa)',
-#                     "Cote d'Ivoire", 'Czechia', 'Eswatini', 'Holy See', 'Korea, South', 'North Macedonia',
-#                     'Saint Vincent and the Grenadines', 'Taiwan[*]', 'Trinidad and Tobago', 'United Kingdom',
-#                     'US', 'West Bank and Gaza', 'Saint Kitts and Nevis','Burma')
+# # Combine Guinea and Guinea 2 and repeat for Liberia/Liberia 2
+# ebola[ebola$country=='Guinea 2',]$country="Guinea"
 # 
-# i = 1
+# ebola[ebola$country=='Liberia 2',]$country="Liberia"
 # 
-# while (i < length(names_to_change)) {
-#   timeseries_df$Country.Region = gsub(names_to_change[i], new_names[i],
-#                                       timeseries_df$Country.Region)
+# 
+# # Convert to date object
+# ebola$date=as.Date(ebola$date, "%Y-%m-%d")
+# 
+# # Create timeline of Ebola deaths and cases
+# df1 = ebola %>% filter(indicator=="Cumulative number of confirmed Ebola cases") %>% 
+#   group_by(date) %>% 
+#   summarise(cases = sum(value)) %>% 
+#   arrange(date) 
+# 
+# 
+# df2 = ebola %>% filter(indicator=="Cumulative number of confirmed Ebola deaths") %>% 
+#   group_by(date) %>% 
+#   summarise(deaths = sum(value)) %>% 
+#   arrange(date)
+# 
+# ebola_timeseries = full_join(df1,df2)
+# 
+# # Impute missing Liberia value on 10/17/14
+# ebola_timeseries[15,2] = 5252
+# 
+# 
+# #Liberia is dropped from dataset after 2/13/15. Add last confirmed number to subsequent times
+# ebola %>% filter(indicator=="Cumulative number of confirmed Ebola deaths") %>% 
+#   group_by(country) %>% summarise(n=n())
+# 
+# ebola %>% filter(country=="Liberia" &
+#                    indicator=="Cumulative number of confirmed Ebola deaths"&
+#                    date>as.Date("02/13/15", "%m/%d/%y"))
+# 
+# ebola_timeseries[ebola_timeseries$date>as.Date("02/13/15", "%m/%d/%y"),]$deaths= ebola_timeseries[ebola_timeseries$date>as.Date("02/13/15", "%m/%d/%y"),]$deaths+3858
+# 
+# # Fix Irregular Liberia dates
+# ebola_timeseries[ebola_timeseries$date==as.Date("10/17/14", "%m/%d/%y"),]$deaths= ebola_timeseries[ebola_timeseries$date==as.Date("10/17/14", "%m/%d/%y"),]$deaths+1157
+# ebola_timeseries[ebola_timeseries$date==as.Date("10/15/14", "%m/%d/%y"),]$deaths= ebola_timeseries[ebola_timeseries$date==as.Date("10/15/14", "%m/%d/%y"),]$deaths+1157
+# 
+# 
+# list_ = filter(ebola_timeseries, ebola_timeseries$date>as.Date("10/25/14", "%m/%d/%y")&
+#                  ebola_timeseries$date <as.Date("02/10/15", "%m/%d/%y"))$deaths
+# list_[1]=2999
+# i=2
+# while (i < length(list_)+1){
+#   temp = list_[i-1]
+#   list_[i]=temp +118
 #   i = i+1
 # }
 # 
+# ebola_timeseries[ebola_timeseries$date>as.Date("10/25/14", "%m/%d/%y")&
+#                    ebola_timeseries$date <as.Date("02/10/15", "%m/%d/%y") ,]$deaths = list_
 # 
 # 
+# # Limit timeframe visualized to July 2015
+# ebola_timeseries = ebola_timeseries %>% filter(date<as.Date("07/5/15", "%m/%d/%y"))
+# 
+# # Recoveries not included in dataset, add dummy value of 1 to prevent bug in timeline graph
+# ebola_timeseries$recoveries = 0
 # 
 # 
-# worldMaps <- function(df, world_data, data_type, period, indicator){
-#   
-#   # Function for setting the aesthetics of the plot
-#   my_theme <- function () { 
-#     theme_bw() + theme(axis.title = element_blank(),
-#                        axis.text = element_blank(),
-#                        axis.ticks = element_blank(),
-#                        panel.grid.major = element_blank(), 
-#                        panel.grid.minor = element_blank(),
-#                        panel.background = element_blank(), 
-#                        legend.position = "bottom",
-#                        panel.border = element_blank(), 
-#                        strip.background = element_rect(fill = 'white', colour = 'white'))
-#   }
-#   
-#   # Select only the data that the user has selected to view
-#   plotdf <- df[df$date == indicator & df$DataType == data_type & df$Period == period,]
-#   plotdf <- plotdf[!is.na(plotdf$ISO3), ]
-#   
-#   # Add the data the user wants to see to the geographical world data
-#   world_data['DataType'] <- rep(data_type, nrow(world_data))
-#   world_data['Period'] <- rep(period, nrow(world_data))
-#   world_data['Indicator'] <- rep(indicator, nrow(world_data))
-#   world_data['Value'] <- plotdf$Value[match(world_data$ISO3, plotdf$ISO3)]
-#   
-#   # Create caption with the data source to show underneath the map
-#   capt <- paste0("Source: ", ifelse(data_type == "Childlessness", "United Nations" , "World Bank"))
-#   
-#   # Specify the plot for the world map
-#   library(RColorBrewer)
-#   library(ggiraph)
-#   g <- ggplot() + 
-#     geom_polygon_interactive(data = subset(world_data, lat >= -60 & lat <= 90), color = 'gray70', size = 0.1,
-#                              aes(x = long, y = lat, fill = Value, group = group, 
-#                                  tooltip = sprintf("%s<br/>%s", ISO3, Value))) + 
-#     scale_fill_gradientn(colours = brewer.pal(5, "RdBu"), na.value = 'white') + 
-#     labs(fill = data_type, color = data_type, title = NULL, x = NULL, y = NULL, caption = capt) + 
-#     my_theme()
-#   
-#   return(g)
-# }
+# ################### SARS data cleaning ###################################################
+# sars_df = read.csv("./Data/sars_2003_cumulative.csv", header = T, stringsAsFactors = FALSE)
+# 
+# 
+# sars_df$Total[3] = "5327"
+# sars_df$Total = as.numeric(sars_df$Total)
+# 
+# sars_df = sars_df %>% transform(Total=as.numeric(Total))
+# sars_total = sars_df %>% summarise(total = sum(Total),
+#                                    deaths = sum(Number.of.deaths.a),
+#                                    mortality_rate = deaths/total*100)
+
+

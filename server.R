@@ -57,90 +57,75 @@ function(input, output, session){
 
     
 ############ Plot the number of Coronavirus cases per country over time #############################
-## Future Work: Add Scale legend tied to size of circleMarkers, Add popup values when you hover, 
-## Future Work: Color-coding the countries based on case number would be better for visualization than the circles
     
     map_date = reactive({
-        df = timeseries_df[which(timeseries_df$date == input$date_slide),]
-        df
+      country_date_df[which(country_date_df$date == input$date_slide),]
     })
 
 
+    
+    observeEvent(input$date_slide, {
+      countries$Value = map_date()$cases[ match(countries$country, map_date()$Country.Region) ]
+      
+      labels <- paste("Country: ", countries$country,"<br/>",
+                      "Total Cases: ", countries$Value, "<br/>",
+                      sep="") %>%
+                lapply(htmltools::HTML)
+      
+      leafletProxy("virus_map") %>%
+            clearGroup('polygons') %>% 
+            addPolygons(data=countries, 
+                        group = 'polygons',
+                        weight=0.5,
+                        opacity = 1,
+                        color = "black",
+                        fillColor = ~pal(countries$Value),
+                        label = ~labels,
+                        fillOpacity = 1,
+                        highlightOptions = highlightOptions(color = "white", 
+                                                            weight = 2,
+                                                            bringToFront = TRUE))
+    })  
+    
+    pal <- colorBin("YlOrRd", domain = countries$Value, bins = bins, na.color = 'transparent')
 
     output$virus_map = renderLeaflet({
-        leaflet() %>%
-            addProviderTiles(providers$Stamen.TonerLite) %>%
-            addFullscreenControl(position = "topleft", pseudoFullscreen = T) %>% 
-            # setView(mean(timeseries_df$Long), mean(timeseries_df$Lat),zoom=1)
-            # addCircleMarkers(lat = map_date()$Lat,
-            #                  lng = map_date()$Long,
-            #                  radius= sqrt(map_date()$case_number)/4,
-            #                  fillOpacity = 0.5,
-            #                  opacity=0.2,
-            #                  color ='red') %>% 
-            fitBounds(lng1 = min(map_date()$Long),
-                      lat1 = min(map_date()$Lat),
-                      lng2 = max(map_date()$Long),
-                      lat2 = max(map_date()$Lat))
+            countries$Value = map_date()$cases[ match(countries$country, map_date()$Country.Region) ]
+            
+            labels <- paste("Country: ", countries$country,"<br/>",
+                            "Total Cases: ", countries$Value, "<br/>",
+                            sep="") %>%
+              lapply(htmltools::HTML)
+            
+            leaflet() %>% 
+                  addTiles(options = providerTileOptions(noWrap = TRUE)) %>% 
+                  addFullscreenControl(position = "topleft", pseudoFullscreen = T) %>%
+                  setView(0.5,1,2.2) %>% 
+                  addLegend(pal = pal, values = countries$Value, 
+                            opacity = 0.7, title = NULL,
+                            position = "bottomright") %>% 
+                  addPolygons(data=countries, 
+                              group = 'polygons',
+                              weight=0.5,
+                              opacity = 1,
+                              color = "black",
+                              fillColor = ~pal(countries$Value),
+                              label = ~labels,
+                              fillOpacity = 1,
+                              highlightOptions = highlightOptions(color = "white", 
+                                                                  weight = 2,
+                                                                  bringToFront = TRUE))
+        })
+      
 
-    })
-
-    observeEvent(input$date_slide, {
-        leafletProxy("virus_map") %>%
-            clearMarkers() %>%
-            addCircleMarkers(lat = map_date()$Lat,
-                             lng = map_date()$Long,
-                             radius= sqrt(map_date()$case_number)/4,
-                             fillOpacity = 0.5,
-                             opacity=0.2,
-                             color ='red')
-
-    })
     
     
+      
+      
+      
+      
     
-    
-    # lng.center <- -99
-    # lat.center <- 60
-    # zoom.def <- 3
-    # 
-    # data <- timeseries_df
-    # 
-    # output$virus_map <- renderLeaflet({
-    #   leaflet() %>%
-    #     addProviderTiles("OpenStreetMap.Mapnik",
-    #                      options = providerTileOptions(opacity = 1),
-    #                      group = "Open Street Map") %>%
-    #     setView(lng = lng.center, lat = lat.center, zoom = zoom.def) %>%
-    #     addPolygons(group = 'base', 
-    #                 fillColor = 'transparent', 
-    #                 color = 'black',
-    #                 weight = 1.5) # %>%
-    #     # addLegend(pal = pal(), values = data$case_number, 
-    #     #           opacity = 0.7, title = NULL,
-    #     #           position = "topright")
-    # })
-    # 
-    # get_data <- reactive({
-    #   data[which(data$date == input$date_slide),]
-    # })
-    # 
-    # pal <- reactive({
-    #   colorNumeric("viridis", domain = data$case_number)
-    # })
-    # 
-    # observe({
-    #   data <- get_data()
-    #   leafletProxy('virus_map', data = data) %>%
-    #     clearGroup('polygons') %>%
-    #     addPolygons(group = 'polygons', 
-    #                 fillColor = ~pal()(data$case_number), 
-    #                 fillOpacity = 0.9,
-    #                 color = 'black',
-    #                 weight = 1.5)
-    # })
-    
-######### Add Timelines of Coronavirus and Ebola data  ###########################
+#########  Plot Daily and Cumulative Numbers for COVID-19 ###########################
      # Calculate the total number of cases, deaths and recoveries for each date
     timeline= reactive({
          time_df = timeseries_df %>% group_by(date) %>%

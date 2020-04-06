@@ -31,13 +31,15 @@ navbarPage("Coronavirus Visualization",
                              width= "50%",
                              max = slider_dates[1],
                              min = tail(slider_dates,1),
-                             value = tail(slider_dates,1),
+                             value = slider_dates[1],
                              animate= animationOptions(interval=500))
                          
                          ),
                  
                      mainPanel(
-                         leafletOutput("virus_map")
+                       box(width = "100%",
+                           height = "800px",
+                       leafletOutput("virus_map", width='100%', height='800px'))
                      )
                  )
            ),
